@@ -622,7 +622,7 @@ impl Notey {
                 }
             }
             buf.select_range(&e, &s);
-            doc.view.scroll_to_iter(&mut s.clone(), 0.1, true, 0.0, 0.5);
+            doc.view.scroll_to_mark(&buf.get_insert(), 0.1, true, 0.0, 0.5);
             this.update_find_count();
             if wrapped {
                 this.toast("Wrapped around");
@@ -773,7 +773,7 @@ impl Notey {
         }
         let buf = &doc.buffer;
         buf.select_range(&buf.iter_at_offset(end), &buf.iter_at_offset(start));
-        doc.view.scroll_to_iter(&mut buf.iter_at_offset(start), 0.1, true, 0.0, 0.5);
+        doc.view.scroll_to_mark(&buf.get_insert(), 0.1, true, 0.0, 0.5);
         doc.view.grab_focus();
     }
 

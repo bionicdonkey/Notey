@@ -176,16 +176,15 @@ pub fn scenarios() -> Vec<Scenario> {
             let d = open_ok(&win, &file);
             pump_for(300);
             d.scroll_to_line_top(300);
-            pump_for(300);
+            // Layout is validated in idle time, so how long this takes depends on the machine.
+            pump_until("the view to scroll to line 300", || d.top_visible_line() > 250);
             let before = d.top_visible_line();
-            assert!(before > 250, "scrolled to {before}");
             quit(&win);
             drop(win);
             let win2 = env.window(&sb);
             win2.window.present();
-            pump_for(600);
-            let top = win2.current_doc().unwrap().top_visible_line();
-            assert!(top.abs_diff(before) <= 3, "restored top line {top}, expected about {before}");
+            let restored = win2.current_doc().unwrap();
+            pump_until("the saved scroll position to be applied", || restored.top_visible_line().abs_diff(before) <= 3);
         }),
         scenario("session_file_changed_while_away_keeps_my_text_and_warns", |env| {
             let sb = env.sandbox();

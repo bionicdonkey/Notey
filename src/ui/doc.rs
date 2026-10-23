@@ -231,15 +231,24 @@ impl Doc {
         it.line().max(0) as u32
     }
 
-    /// Scrolls so `line` is at the top. Needs an allocated view, so callers use an idle callback.
+    /// Scrolls so `line` is at the top. This goes through a mark: GTK computes line heights lazily,
+    /// and `scroll_to_iter` silently does nothing for a far-away line until they are known, while a
+    /// mark keeps the request and applies it once the layout has been validated.
     pub fn scroll_to_line_top(&self, line: u32) {
         let it = self.iter_at(Cursor { line, column: 0 });
-        self.view.scroll_to_iter(&mut it.clone(), 0.0, true, 0.0, 0.0);
+        let mark = match self.buffer.mark("notey-scroll") {
+            Some(m) => {
+                self.buffer.move_mark(&m, &it);
+                m
+            }
+            None => self.buffer.create_mark(Some("notey-scroll"), &it, true),
+        };
+        self.view.scroll_to_mark(&mark, 0.0, true, 0.0, 0.0);
     }
 
+    /// Centres the caret, deferring until line heights are known (see `scroll_to_line_top`).
     pub fn center_on_cursor(&self) {
-        let mut it = self.buffer.iter_at_offset(self.buffer.cursor_position());
-        self.view.scroll_to_iter(&mut it, 0.0, true, 0.0, 0.5);
+        self.view.scroll_to_mark(&self.buffer.get_insert(), 0.0, true, 0.0, 0.5);
     }
 
     /// Applies the best language for the file name and content; honours the manual override.
