@@ -1,7 +1,7 @@
 <component type="desktop-application">
   <id>com.zorin.Notey</id>
   <name>NoteyMcNoteface</name>
-  <summary>A tabbed text editor that never loses your notes</summary>
+  <summary>A tabbed text editor that remembers your notes between sessions</summary>
   <description>
     <p>NoteyMcNoteface (Notey) is a native text editor for GNOME and Zorin OS. Tabs, including unsaved and untitled ones, come back exactly as you left them after a restart or a crash.</p>
     <p>It highlights source code and markup, finds and replaces with plain text or regular expressions, and detects, shows and converts text encodings and line endings.</p>

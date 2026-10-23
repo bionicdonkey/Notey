@@ -75,7 +75,7 @@ Installed-Size: $(du -sk "$pkg/usr" | cut -f1)
 Depends: $depends
 Section: editors
 Priority: optional
-Description: Tabbed text editor that never loses your notes
+Description: Tabbed text editor that remembers your notes between sessions
  NoteyMcNoteface (Notey) is a native text editor for GNOME and Zorin OS. Tabs,
  including unsaved ones, persist across restarts. It highlights code and markup,
  comments and uncomments lines, finds and replaces with regular expressions, and

@@ -365,7 +365,7 @@ impl Notey {
         text.append(&version);
         identity.append(&text);
         p.append(&identity);
-        let description = Label::new(Some("A tabbed text editor for Linux that never loses your notes, designed for Zorin OS and GNOME."));
+        let description = Label::new(Some("A tabbed text editor for Linux that remembers your notes between sessions, designed for Zorin OS and GNOME."));
         description.set_wrap(true);
         description.set_xalign(0.0);
         description.set_margin_top(8);
@@ -568,7 +568,7 @@ impl Notey {
             .application_name("NoteyMcNoteface")
             .application_icon("com.zorin.Notey")
             .version(env!("CARGO_PKG_VERSION"))
-            .comments("A tabbed text editor that never loses your notes.")
+            .comments("A tabbed text editor that remembers your notes between sessions.")
             .license_type(gtk::License::Gpl30)
             .build();
         about.present();

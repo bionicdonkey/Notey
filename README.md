@@ -6,13 +6,15 @@ native app: it follows the system light and dark theme and uses standard shortcu
 
 ## Purpose
 
-Most editors make you decide what to do with an unsaved note before you can close them. Notey takes
-the opposite view: **every tab, including untitled and unsaved ones, comes back exactly as you left
-it** after a restart, a crash or a reboot. Autosave keeps a private session copy and never touches
-your files; a file only changes when you save it.
+Notey is a simple, native text editor for the GNOME desktop, in the spirit of Notepad++ and Windows
+Notepad: open a file, jot a note, and close the window without a second thought. Like those editors it
+remembers your session, so every tab, including untitled and unsaved ones, is back the way you left it
+after a restart or a crash. It does this with a private session copy; autosave never writes to your
+files, which only change when you save them.
 
-Around that sits what you expect from a good everyday editor: syntax highlighting, comment toggling,
-find and replace with regular expressions, and proper handling of text encodings and line endings.
+It aims to bring that workflow to GNOME as a native GTK 4 app, with the everyday tools of a code and
+text editor around it: syntax highlighting, comment toggling, find and replace with regular
+expressions, and proper handling of text encodings and line endings.
 
 ## Features
 

@@ -1,4 +1,4 @@
-//! Tabs that never lose text: snapshots, restore, crash recovery, closed tabs.
+//! Tabs that keep their text: snapshots, restore, crash recovery, closed tabs.
 use super::support::*;
 use gtk::prelude::*;
 use notey::core::session::Cursor;

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=NoteyMcNoteface
 GenericName=Text Editor
-Comment=A tabbed text editor that never loses your notes
+Comment=A tabbed text editor that remembers your notes between sessions
 Exec=notey %F
 Icon=com.zorin.Notey
 Terminal=false
