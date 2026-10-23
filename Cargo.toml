@@ -1,0 +1,45 @@
+[package]
+name = "notey"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+description = "NoteyMcNoteface: a tabbed text editor for Linux"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+adw = { package = "libadwaita", version = "0.6", features = ["v1_5"] }
+gio = "0.19"
+glib = "0.19"
+gtk = { package = "gtk4", version = "0.8", features = ["v4_12"] }
+sourceview5 = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+encoding_rs = "0.8"
+chardetng = "1"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+libc = "0.2"
+
+[dev-dependencies]
+tempfile = "3"
+proptest = "1"
+
+[[test]]
+name = "headless_gtk"
+path = "tests/headless_gtk/main.rs"
+# A scenario runner with its own main: GTK may be initialised once per process.
+harness = false
+
+[[bin]]
+name = "notey"
+path = "src/main.rs"
+
+# glib 0.19's Regex/MatchInfo wrappers assert that a FALSE return always carries an error,
+# but GLib returns FALSE for an ordinary "no (more) match". Release builds skip the assert;
+# keep dev and test builds from aborting on it too.
+[profile.dev.package.glib]
+debug-assertions = false
+
+# Same for sourceview5's SearchContext::replace, which asserts that FALSE carries an error.
+[profile.dev.package.sourceview5]
+debug-assertions = false

@@ -1,0 +1,57 @@
+name: Tests
+
+# The full automated suite on every push and pull request: core purity, clippy -D warnings,
+# unit, property, fixture, window and process tests under xvfb, and a release build.
+# Run the same thing locally with scripts/ci.sh (see docs/testing.md).
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Ubuntu 24.04 matches the baseline the package targets (Zorin OS 18): GTK 4.14,
+    # libadwaita 1.5, GtkSourceView 5.12.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out the commit
+        uses: actions/checkout@v4
+
+      - name: Install the build dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config xvfb \
+            libgtk-4-dev libadwaita-1-dev libgtksourceview-5-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check, lint and test
+        run: sh scripts/ci.sh
+
+      - name: Upload the test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: target/ci-test.log
+          if-no-files-found: ignore
+          retention-days: 14

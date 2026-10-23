@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=NoteyMcNoteface
+GenericName=Text Editor
+Comment=A tabbed text editor that never loses your notes
+Exec=notey %F
+Icon=com.zorin.Notey
+Terminal=false
+Type=Application
+Categories=GTK;GNOME;Utility;TextEditor;
+Keywords=text;editor;notepad;notes;
+StartupNotify=true
+StartupWMClass=com.zorin.Notey
+MimeType=text/plain;text/markdown;text/x-log;text/x-csrc;text/x-chdr;text/x-c++src;text/x-python;text/x-rust;text/x-shellscript;text/x-script.python;text/x-makefile;text/x-diff;text/x-patch;text/x-toml;text/html;text/css;text/csv;text/xml;application/json;application/x-yaml;application/x-shellscript;application/xml;application/toml;application/x-desktop;

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="cover" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a97ea"/>
+      <stop offset="1" stop-color="#2380d6"/>
+    </linearGradient>
+  </defs>
+  <!-- soft shadow under the notepad -->
+  <rect x="21" y="35" width="90" height="86" rx="13" fill="#164f9d" opacity=".25"/>
+  <!-- two tabs along the top: the active one is solid, the other lighter -->
+  <path d="M24 38V30a8 8 0 0 1 8-8h22a8 8 0 0 1 8 8v8z" fill="#2689dc"/>
+  <path d="M66 38V30a8 8 0 0 1 8-8h22a8 8 0 0 1 8 8v8z" fill="#7cc1f4"/>
+  <!-- the pad -->
+  <rect x="18" y="34" width="92" height="88" rx="12" fill="url(#cover)"/>
+  <rect x="18" y="46" width="92" height="9" fill="#9de1ff" opacity=".4"/>
+  <!-- the page -->
+  <rect x="30" y="52" width="68" height="62" rx="6" fill="#f7fbff"/>
+  <path d="M42 68h44M42 80h44M42 92h26" stroke="#2f7fd4" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+  <!-- a pencil resting across the corner -->
+  <g transform="translate(97 96) rotate(45)">
+    <rect x="-6" y="-26" width="12" height="38" rx="1.5" fill="#f5c211"/>
+    <rect x="-6" y="-26" width="4" height="38" fill="#e5a50a"/>
+    <rect x="-6" y="-30" width="12" height="6" fill="#c0bfbc"/>
+    <rect x="-6" y="-37" width="12" height="8" rx="3" fill="#ed6b5b"/>
+    <path d="M-6 12h12l-6 13z" fill="#f2d7a8"/>
+    <path d="M-2.4 19.2h4.8L0 25z" fill="#3d3846"/>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+<component type="desktop-application">
+  <id>com.zorin.Notey</id>
+  <name>NoteyMcNoteface</name>
+  <summary>A tabbed text editor that never loses your notes</summary>
+  <description>
+    <p>NoteyMcNoteface (Notey) is a native text editor for GNOME and Zorin OS. Tabs, including unsaved and untitled ones, come back exactly as you left them after a restart or a crash.</p>
+    <p>It highlights source code and markup, finds and replaces with plain text or regular expressions, and detects, shows and converts text encodings and line endings.</p>
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <launchable type="desktop-id">com.zorin.Notey.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <!-- Keep in step with `version` in Cargo.toml. -->
+  <releases>
+    <release version="0.1.0" date="2026-10-24">
+      <description>
+        <p>First release: persistent tabs, syntax highlighting, comment toggling, find and replace with regular expressions, encoding and line-ending conversion, and preferences including the indent width.</p>
+      </description>
+    </release>
+  </releases>
+</component>
