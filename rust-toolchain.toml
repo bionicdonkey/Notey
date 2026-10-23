@@ -1,0 +1,7 @@
+# One Rust version for local builds and CI, so a lint added in a newer release cannot turn CI red
+# while your machine is still green. To move to a newer one: change `channel`, run
+# `scripts/ci.sh`, fix anything new, and commit both together.
+[toolchain]
+channel = "1.99.1"
+profile = "minimal"
+components = ["clippy"]
