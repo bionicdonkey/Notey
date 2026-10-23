@@ -18,6 +18,24 @@ Without a display the script wraps cargo in `xvfb-run -a` (`sudo apt install xvf
 | `.github/workflows/test.yml` | every push to a branch other than `main`, every pull request | `scripts/ci.sh` on `ubuntu-24.04`; uploads `target/ci-test.log` |
 | `.github/workflows/deb.yml` | pushes to `main` and `v*` tags | `scripts/ci.sh`, then builds `notey_<version>_amd64.deb` and uploads it as an artifact; a `v*` tag also publishes a GitHub release with the package (the tag must equal the version in `Cargo.toml`) |
 
+### Skipping a build
+
+A push triggers a build, except for docs-only changes (`docs/**` and `*.md` never start the package
+workflow). For anything else that does not change behaviour, such as a spelling fix, a reworded string
+or a comment, put **`[skip build]`** anywhere in the commit message:
+
+```
+Fix a typo in the shortcuts list [skip build]
+```
+
+- It applies to the **newest commit of the push**: push three commits and only the last one's message is
+  read. To skip a batch, mark the last commit; to build it, don't.
+- A **tag** (`v*`) always builds, whatever the commit says, so a release is never skipped by accident.
+- To build a commit that was skipped, open **Actions**, choose the workflow and use **Run workflow**
+  (pick the branch). Pull requests always run their checks.
+- GitHub's own `[skip ci]` also works, but it skips *every* workflow including a tag's package build, so
+  prefer `[skip build]`.
+
 Both install `libgtk-4-dev libadwaita-1-dev libgtksourceview-5-dev xvfb` and use the stable Rust toolchain
 with clippy. `Cargo.lock` must be committed because the scripts build with `--locked`.
 

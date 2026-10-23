@@ -19,6 +19,9 @@ concurrency:
 
 jobs:
   test:
+    # Put [skip build] in the newest commit message of a push to skip this run (a typo fix, a
+    # wording change). Pull requests and "Run workflow" always run. See docs/testing.md.
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip build]')
     # Ubuntu 24.04 matches the baseline the package targets (Zorin OS 18): GTK 4.14,
     # libadwaita 1.5, GtkSourceView 5.12.
     runs-on: ubuntu-24.04

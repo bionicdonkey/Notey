@@ -169,7 +169,8 @@ fn sniff_utf16_without_bom(bytes: &[u8]) -> Option<Encoding> {
 }
 
 fn decode_utf16(bytes: &[u8], big_endian: bool) -> (String, bool) {
-    let units = bytes.chunks_exact(2).map(|c| {
+    // The trailing odd byte, if any, is reported below; `as_chunks` leaves it out of the pairs.
+    let units = bytes.as_chunks::<2>().0.iter().map(|c| {
         if big_endian {
             u16::from_be_bytes([c[0], c[1]])
         } else {
@@ -196,7 +197,7 @@ fn decode_utf16(bytes: &[u8], big_endian: bool) -> (String, bool) {
 fn decode_utf32(bytes: &[u8], big_endian: bool) -> (String, bool) {
     let mut had_errors = !bytes.len().is_multiple_of(4);
     let mut out = String::with_capacity(bytes.len() / 4);
-    for c in bytes.chunks_exact(4) {
+    for c in bytes.as_chunks::<4>().0 {
         let v = if big_endian {
             u32::from_be_bytes([c[0], c[1], c[2], c[3]])
         } else {

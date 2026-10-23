@@ -24,6 +24,10 @@ concurrency:
 
 jobs:
   deb:
+    # Put [skip build] in the newest commit message of a push to main to skip this run (a typo
+    # fix, a wording change). A tag always builds, so a release can never be skipped by accident,
+    # and "Run workflow" always builds. See docs/testing.md.
+    if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/v') || !contains(github.event.head_commit.message, '[skip build]')
     # Ubuntu 24.04 is the baseline (Zorin OS 18). The Depends line is computed from the libraries
     # the binary links, so building on the oldest supported release gives a package that installs
     # there and on anything newer.
