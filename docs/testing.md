@@ -11,6 +11,28 @@ Without a display the script wraps cargo in `xvfb-run -a` (`sudo apt install xvf
 `NOTEY_REQUIRE_DISPLAY=1` so a missing display fails instead of silently skipping tests, and
 `NOTEY_STRICT_WARNINGS=1` so a GLib/GTK warning or critical fails the window scenario that caused it.
 
+## Before you push
+
+```bash
+scripts/install-hooks.sh        # once per clone: turns on the pre-push hook
+```
+
+The **pre-push hook** runs `scripts/ci.sh --quick` (core purity and every test, under `xvfb-run` when
+there is no display) and stops the push if anything fails. `git push --no-verify` skips it, and it skips
+itself when the newest commit carries the no-build marker (see "Skipping a build" below).
+`scripts/install-hooks.sh --remove` turns it off.
+
+**One Rust version everywhere.** `rust-toolchain.toml` pins the toolchain, so a clippy lint added in a
+newer release cannot fail CI while your machine (on an older Rust) is green. rustup picks it up
+automatically. With an older rustup (before 1.28) install it once:
+`rustup toolchain install $(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml) --profile minimal --component clippy`.
+CI reads the same file. To move to a newer Rust, change `channel`, run `scripts/ci.sh`, fix what is new,
+and commit both together. (`rust-version` in `Cargo.toml` is the *minimum* the code supports and is
+separate from this.)
+
+Whatever passes `scripts/ci.sh` here should pass on GitHub except for timing: the runner is slower, so
+tests wait for conditions instead of sleeping fixed times.
+
 ## Continuous integration (GitHub Actions)
 
 | Workflow | Runs on | Does |
@@ -36,8 +58,8 @@ Fix a typo in the shortcuts list [skip build]
 - GitHub's own `[skip ci]` also works, but it skips *every* workflow including a tag's package build, so
   prefer `[skip build]`.
 
-Both install `libgtk-4-dev libadwaita-1-dev libgtksourceview-5-dev xvfb` and use the stable Rust toolchain
-with clippy. `Cargo.lock` must be committed because the scripts build with `--locked`.
+Both install `libgtk-4-dev libadwaita-1-dev libgtksourceview-5-dev xvfb` and the Rust version pinned in
+`rust-toolchain.toml` (with clippy). `Cargo.lock` must be committed because the scripts build with `--locked`.
 
 ## Layers
 

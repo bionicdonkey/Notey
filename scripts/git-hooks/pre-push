@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Runs the quick checks before a push, so a failure shows up here instead of on GitHub.
+#
+#   git push                 runs scripts/ci.sh --quick (core purity, every test; no clippy or release build)
+#   git push --no-verify     skips this hook
+#
+# Skipped when the newest commit asks for no build, exactly as the workflows do. Install with
+# scripts/install-hooks.sh.
+set -eu
+
+root="$(git rev-parse --show-toplevel)"
+cd "$root"
+
+# Deleting a branch or pushing only tags has nothing to test.
+run=0
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    case "$local_sha" in
+    0000000000000000000000000000000000000000) ;;
+    *) run=1 ;;
+    esac
+done
+[ "$run" -eq 1 ] || exit 0
+
+if git log -1 --format=%B | grep -qiF '[skip build]'; then
+    echo "pre-push: newest commit asks for no build; skipping the checks"
+    exit 0
+fi
+
+echo "pre-push: running scripts/ci.sh --quick (git push --no-verify to skip)"
+exec sh scripts/ci.sh --quick

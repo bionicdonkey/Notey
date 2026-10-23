@@ -108,7 +108,7 @@ sudo install -Dm644 resources/icons/hicolor/symbolic/apps/com.zorin.Notey-symbol
     /usr/local/share/icons/hicolor/symbolic/apps/com.zorin.Notey-symbolic.svg
 ```
 
-Needs Rust 1.89 or newer (install with [rustup](https://rustup.rs)); distribution packages of `cargo` are usually too old. To build your own package instead,
+Needs Rust 1.89 or newer (install with [rustup](https://rustup.rs)); distribution packages of `cargo` are usually too old. The repository pins the toolchain it is tested with in `rust-toolchain.toml`, which rustup uses automatically. To build your own package instead,
 run `packaging/deb/build-deb.sh` and install `dist/notey_<version>_<arch>.deb`.
 
 ## Usage
@@ -140,6 +140,7 @@ Session files are private (mode 0600) and can be cleared from Preferences ▸ Se
 cargo run                       # a debug build
 scripts/ci.sh                   # everything CI runs: purity, clippy, all tests, release build
 scripts/ci.sh --quick           # skip clippy and the release build
+scripts/install-hooks.sh        # once per clone: run the quick checks before every push
 xvfb-run -a cargo test          # window and process tests need a display
 ```
 
