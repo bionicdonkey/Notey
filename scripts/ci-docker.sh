@@ -8,6 +8,8 @@
 #   NOTEY_DOCKER_CMD='xvfb-run -a cargo test --test headless_gtk -- session_scroll' scripts/ci-docker.sh
 #                                        any other command, from the repository root
 #
+# NOTEY_DOCKER_FLAGS adds docker options, e.g. NOTEY_DOCKER_FLAGS=--cpus=1 to imitate a small runner.
+#
 # The checkout is mounted read-only; cargo's cache and the build output live in named Docker volumes
 # (notey-ci-cargo, notey-ci-rustup, notey-ci-target) so later runs are fast. `docker volume rm
 # notey-ci-cargo notey-ci-rustup notey-ci-target` starts from scratch. It does not copy the runner's CPU speed or its display.
@@ -19,7 +21,7 @@ cmd="${NOTEY_DOCKER_CMD:-sh scripts/ci.sh $*}"
 
 # Runs as an ordinary user like the GitHub runner. As root, file permissions mean nothing, so the
 # read-only-file tests would fail for a reason that does not exist on a real machine.
-exec docker run --rm \
+exec docker run --rm ${NOTEY_DOCKER_FLAGS:-} \
     -v "$root":/src:ro \
     -v notey-ci-cargo:/home/runner/.cargo \
     -v notey-ci-rustup:/home/runner/.rustup \
