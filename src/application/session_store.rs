@@ -372,6 +372,8 @@ enum Job {
     Buffer { file: String, text: String },
     RemoveBuffer(String),
     Manifest(Session),
+    /// Forget everything stored. Runs in queue order, after the writes queued before it.
+    Clear,
 }
 
 impl Job {
@@ -379,6 +381,7 @@ impl Job {
         match self {
             Job::Buffer { file, .. } | Job::RemoveBuffer(file) => format!("buf:{file}"),
             Job::Manifest(_) => "manifest".into(),
+            Job::Clear => "clear".into(),
         }
     }
 }
@@ -431,6 +434,10 @@ impl SessionWriter {
                                 Ok(())
                             }
                             Job::Manifest(s) => store.save_manifest(s),
+                            Job::Clear => {
+                                store.clear();
+                                Ok(())
+                            }
                         };
                         if let Err(e) = r {
                             errors.push(e.to_string());
@@ -455,6 +462,12 @@ impl SessionWriter {
 
     pub fn write_manifest(&self, session: Session) {
         let _ = self.tx.send(Msg::Job(Job::Manifest(session)));
+    }
+
+    /// Deletes the stored session (after anything already queued). Callers that still have unsaved
+    /// tabs must write them again afterwards.
+    pub fn clear(&self) {
+        let _ = self.tx.send(Msg::Job(Job::Clear));
     }
 
     /// Blocks until everything queued so far is on disk. Returns write errors since the last flush.
@@ -522,6 +535,21 @@ mod writer_tests {
         assert!(!dir.join("buffers/a.txt").exists());
         let m = Session::parse(&fs::read_to_string(dir.join("session.json")).unwrap()).unwrap();
         assert_eq!(m.tabs[0].buffer_file, None);
+    }
+
+    #[test]
+    fn clear_runs_after_earlier_writes_and_before_later_ones() {
+        let d = tempfile::tempdir().unwrap();
+        let dir = d.path().join("s");
+        let w = SessionWriter::start(SessionStore::new(dir.clone()));
+        w.write_buffer("old.txt".into(), "old".into());
+        w.write_manifest(Session::default());
+        w.clear();
+        w.write_buffer("new.txt".into(), "new".into());
+        assert!(w.flush().is_empty());
+        assert!(!dir.join("buffers/old.txt").exists(), "cleared");
+        assert!(!dir.join("session.json").exists(), "cleared");
+        assert_eq!(fs::read_to_string(dir.join("buffers/new.txt")).unwrap(), "new", "written after the clear");
     }
 
     #[test]

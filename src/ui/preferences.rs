@@ -2,7 +2,6 @@
 //! category switcher, each category a plain page of checks, radios, spin buttons and buttons.
 use super::menus::{move_entry, nth_known, quick_action, QUICK_ACTIONS, SEPARATOR};
 use super::window::Notey;
-use crate::application::session_store::SessionStore;
 use crate::core::encoding::Encoding;
 use crate::core::line_ending::LineEnding;
 use crate::settings::{Settings, ThemeChoice, MAX_INDENT_WIDTH, MIN_INDENT_WIDTH};
@@ -338,8 +337,7 @@ impl Notey {
         let weak = Rc::downgrade(self);
         p.append(&Self::button("Clear saved session", move || {
             if let Some(t) = weak.upgrade() {
-                SessionStore::new(t.reader.dir().to_path_buf()).clear();
-                t.write_manifest_now();
+                t.clear_saved_session();
                 t.toast("Saved session cleared");
             }
         }));

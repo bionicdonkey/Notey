@@ -286,6 +286,20 @@ pub fn scenarios() -> Vec<Scenario> {
             let win2 = env.window(&sb);
             assert_eq!(win2.current_doc().unwrap().text(), "do not lose me");
         }),
+        scenario("session_clearing_the_saved_session_keeps_open_unsaved_tabs_safe", |env| {
+            let sb = env.sandbox();
+            let win = env.window(&sb);
+            let d = win.current_doc().unwrap();
+            append(&d, "still open and unsaved");
+            wait_for_buffer_file(&sb, &d.id, true);
+            win.clear_saved_session();
+            // The stored copy is rewritten for the tab that is still open ...
+            wait_for_buffer_file(&sb, &d.id, true);
+            assert_eq!(std::fs::read_to_string(sb.buffer_file(&d.id)).unwrap(), "still open and unsaved");
+            // ... so a crash right now still loses nothing.
+            let w2 = env.window(&sb);
+            assert_eq!(w2.current_doc().unwrap().text(), "still open and unsaved");
+        }),
         scenario("session_closing_the_last_tab_leaves_a_fresh_untitled_one", |env| {
             let sb = env.sandbox();
             let win = env.window(&sb);
