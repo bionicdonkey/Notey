@@ -44,6 +44,8 @@ pub struct FindBar {
     /// The range captured when "Selection" scope was chosen.
     selection_scope: Cell<Option<(i32, i32)>>,
     pub visible: Cell<bool>,
+    /// A re-check of an unfinished match count is already scheduled.
+    recount_pending: Cell<bool>,
 }
 
 impl FindBar {
@@ -135,6 +137,7 @@ impl FindBar {
             debounce: RefCell::new(None),
             selection_scope: Cell::new(None),
             visible: Cell::new(false),
+            recount_pending: Cell::new(false),
         }
     }
 
@@ -537,6 +540,7 @@ impl Notey {
         let total = doc.search.occurrences_count();
         if total < 0 {
             f.count.set_label("Counting…");
+            self.recheck_count_soon();
         } else if total == 0 {
             f.count.set_label("No results");
         } else {
@@ -550,6 +554,23 @@ impl Notey {
                 None => format!("{total} found"),
             });
         }
+    }
+
+    /// GtkSourceView counts matches in the background and says so with a property notification. If
+    /// that notification is ever missed the label would stay on "Counting…" for good, so look again
+    /// shortly. It stops by itself once the count is known or the find bar is closed.
+    fn recheck_count_soon(&self) {
+        if self.find.recount_pending.replace(true) {
+            return;
+        }
+        let Some(this) = self.weak_self.borrow().upgrade() else {
+            self.find.recount_pending.set(false);
+            return;
+        };
+        glib::timeout_add_local_once(Duration::from_millis(150), move || {
+            this.find.recount_pending.set(false);
+            this.update_find_count();
+        });
     }
 
     fn remember_query(&self) {
