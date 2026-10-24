@@ -688,6 +688,11 @@ impl Notey {
             }
             closed.remove(0)
         };
+        // The tab's text was handed to the writer thread when it closed; make sure it is on disk
+        // before reading it back, or a quick reopen would find nothing there.
+        if let Some(w) = self.writer.borrow().as_ref() {
+            w.flush();
+        }
         let buffer = rec.buffer_file.as_ref().map(|f| self.reader.read_buffer(f).ok());
         let doc = self.restore_tab(&rec, buffer);
         let page = self.add_doc(&doc, true);
@@ -717,6 +722,19 @@ impl Notey {
         s.active_tab = self.current_doc().map(|d| d.id.clone());
         s.closed_tabs = self.closed.borrow().clone();
         s
+    }
+
+    /// "Clear saved session": forget what is stored, but keep every open tab's unsaved text safe by
+    /// writing it again straight away. Going through the writer thread keeps the order right.
+    pub fn clear_saved_session(&self) {
+        if let Some(w) = self.writer.borrow().as_ref() {
+            w.clear();
+        }
+        for d in self.docs.borrow().iter() {
+            d.has_buffer_file.set(false); // so the next snapshot writes the text again
+        }
+        self.snapshot_all();
+        self.write_manifest_now();
     }
 
     /// True when the manifest would include a tab that is not a document (it never should).
