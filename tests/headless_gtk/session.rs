@@ -174,6 +174,13 @@ pub fn scenarios() -> Vec<Scenario> {
             win.window.present();
             let d = open_ok(&win, &file);
             pump_for(300);
+            // On a bare display without a window manager (some CI runners) the window may never be
+            // given a size. A view with no height cannot scroll, so there is nothing to test there;
+            // the scenario still runs wherever the window is laid out.
+            if d.view.height() < 100 {
+                println!("    (skipped: the test window was not given a size on this display)");
+                return;
+            }
             d.scroll_to_line_top(300);
             // Layout is validated in idle time, so how long this takes depends on the machine.
             pump_until("the view to scroll to line 300", || d.top_visible_line() > 250);

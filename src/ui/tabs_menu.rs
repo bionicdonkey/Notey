@@ -27,6 +27,10 @@ impl Notey {
 
     pub fn install_tab_menu(self: &Rc<Self>) {
         let menu = gio::Menu::new();
+        let save = gio::Menu::new();
+        save.append(Some("Save"), Some("win.tab-save"));
+        save.append(Some("Save As…"), Some("win.tab-save-as"));
+        menu.append_section(None, &save);
         let close = gio::Menu::new();
         close.append(Some("Close"), Some("win.tab-close"));
         close.append(Some("Close Others"), Some("win.tab-close-others"));
@@ -50,6 +54,9 @@ impl Notey {
             }
         });
 
+        // These act on the tab that was right-clicked, which need not be the selected one.
+        self.add_ctx_action("tab-save", |t, d, _| t.spawn_save(&d, false));
+        self.add_ctx_action("tab-save-as", |t, d, _| t.spawn_save(&d, true));
         self.add_ctx_action("tab-close", |t, _, p| {
             t.tab_view.close_page(&p);
         });

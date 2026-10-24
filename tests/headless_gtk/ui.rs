@@ -332,6 +332,33 @@ pub fn scenarios() -> Vec<Scenario> {
             act(&win, "tab-close-right");
             assert_eq!(win.docs.borrow().len(), 1);
         }),
+        scenario("ui_tab_context_menu_save_writes_the_tab_that_was_clicked", |env| {
+            let sb = env.sandbox();
+            let win = env.window(&sb);
+            let a = open_ok(&win, &sb.write("a.txt", "a"));
+            let b = open_ok(&win, &sb.write("b.txt", "b"));
+            append(&a, "1");
+            append(&b, "2");
+            // `b` is selected; the user right-clicks `a`'s tab header and chooses Save.
+            assert!(std::rc::Rc::ptr_eq(&win.current_doc().unwrap(), &b));
+            *win.context_page.borrow_mut() = win.page_of(&a);
+            act(&win, "tab-save");
+            pump_until("a.txt to be written", || sb.read("a.txt") == b"a1");
+            assert_eq!(sb.read("b.txt"), b"b", "the selected tab was not saved");
+            assert!(!a.is_dirty() && b.is_dirty());
+        }),
+        scenario("ui_the_tab_context_menu_offers_save_and_save_as", |env| {
+            let sb = env.sandbox();
+            let win = env.window(&sb);
+            let model = win.tab_view.menu_model().expect("tab menu model");
+            let mut names = Vec::new();
+            action_names(&model, &mut names);
+            assert_eq!(&names[..2], ["win.tab-save", "win.tab-save-as"], "Save is at the top: {names:?}");
+            for n in names {
+                let short = n.strip_prefix("win.").unwrap();
+                assert!(gio::prelude::ActionMapExt::lookup_action(&win.window, short).is_some(), "missing action {n}");
+            }
+        }),
         scenario("ui_window_title_and_subtitle_follow_the_selected_tab", |env| {
             let sb = env.sandbox();
             let win = env.window(&sb);
