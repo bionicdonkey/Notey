@@ -38,9 +38,8 @@ fn main() {
             if files.is_empty() {
                 win.window.present();
             } else {
-                for (path, line) in files {
-                    win.open_in_background(vec![path], line);
-                }
+                // One call for all of them, so the tabs open in the order given.
+                win.open_in_background(files);
             }
             0
         }

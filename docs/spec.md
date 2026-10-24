@@ -88,7 +88,7 @@ newline unless the user sets "Ensure newline at end of file" (default off).
 4.3 **Reopen closed tab** (Ctrl+Shift+T): keeps the last 20 closed tabs *including their unsaved
 content*, in memory for the process lifetime and persisted in the session (§5.4).
 4.4 Reorder by drag; Ctrl+PageUp/PageDown and Ctrl+Tab/Ctrl+Shift+Tab cycle; Alt+1…9 jump; tab
-context menu: Close, Close Others, Close to the Right, Pin/Unpin, Copy Path, Copy Name, Show in
+context menu: Save, Save As, Close, Close Others, Close to the Right, Pin/Unpin, Copy Path, Copy Name, Show in
 Files, Reload from Disk, Rename (file-backed: renames on disk).
 4.5 Pinned tabs sit at the left, are compact, and are skipped by Close Others/Close All.
 4.6 Duplicate-title disambiguation: two tabs named `main.rs` show `main.rs — src/ui` style

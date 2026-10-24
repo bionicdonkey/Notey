@@ -122,15 +122,17 @@ impl Notey {
 
     /// Files dropped on the window (from a file manager).
     pub fn open_dropped(self: &Rc<Self>, files: &[gio::File]) {
-        let paths: Vec<PathBuf> = files.iter().filter_map(|f| f.path()).collect();
-        self.open_in_background(paths, None);
+        let paths: Vec<(PathBuf, Option<u32>)> = files.iter().filter_map(|f| f.path()).map(|p| (p, None)).collect();
+        self.open_in_background(paths);
     }
 
-    pub fn open_in_background(self: &Rc<Self>, paths: Vec<PathBuf>, line: Option<u32>) {
+    /// Opens the files one after another, in the order given, then raises the window. Callers pass
+    /// every file in one call: separate calls would run concurrently and finish in any order.
+    pub fn open_in_background(self: &Rc<Self>, files: Vec<(PathBuf, Option<u32>)>) {
         let this = self.clone();
         glib::spawn_future_local(async move {
-            for p in paths {
-                this.open_path(p, line).await;
+            for (path, line) in files {
+                this.open_path(path, line).await;
             }
             this.window.present();
         });
@@ -647,7 +649,7 @@ impl Notey {
         open_recent.connect_activate(move |_, param| {
             if let (Some(t), Some(p)) = (weak.upgrade(), param.and_then(|p| p.get::<String>())) {
                 if Path::new(&p).exists() {
-                    t.open_in_background(vec![PathBuf::from(p)], None);
+                    t.open_in_background(vec![(PathBuf::from(p), None)]);
                 } else {
                     let mut s = t.settings.borrow_mut();
                     s.recent_files.retain(|x| *x != p);

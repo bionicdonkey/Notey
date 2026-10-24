@@ -265,6 +265,18 @@ pub fn scenarios() -> Vec<Scenario> {
             assert_eq!((sb.read("a.txt"), sb.read("b.txt")), (b"1a".to_vec(), b"2b".to_vec()));
             assert!(!a.is_dirty() && !b.is_dirty());
         }),
+        scenario("files_several_files_open_in_the_order_given", |env| {
+            let sb = env.sandbox();
+            let win = env.window(&sb);
+            // Different sizes so a concurrent open would finish out of order.
+            let big = sb.write("c_big.txt", "x\n".repeat(400_000));
+            let a = sb.write("a.txt", "a");
+            let b = sb.write("b.txt", "b");
+            win.open_in_background(vec![(big, None), (a, Some(1)), (b, None)]);
+            pump_until("all three files to open", || win.docs.borrow().len() == 3);
+            let names: Vec<String> = win.docs_in_order().iter().map(|d| d.name()).collect();
+            assert_eq!(names, ["c_big.txt", "a.txt", "b.txt"]);
+        }),
         scenario("files_dropped_files_open_in_tabs", |env| {
             let sb = env.sandbox();
             let win = env.window(&sb);
