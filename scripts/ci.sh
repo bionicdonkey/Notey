@@ -39,8 +39,9 @@ if [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
     run="xvfb-run -a"
 fi
 
-mkdir -p target
-log=target/ci-test.log
+# Where the test output is kept (CI uploads it). The Docker wrapper points this at a writable volume.
+log="${NOTEY_CI_LOG:-target/ci-test.log}"
+mkdir -p "$(dirname "$log")"
 stage "tests: unit, properties, fixtures, window scenarios, process smoke"
 # shellcheck disable=SC2086
 if ! $run cargo test --locked --no-fail-fast 2>&1 | tee "$log"; then

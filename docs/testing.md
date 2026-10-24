@@ -30,6 +30,14 @@ CI reads the same file. To move to a newer Rust, change `channel`, run `scripts/
 and commit both together. (`rust-version` in `Cargo.toml` is the *minimum* the code supports and is
 separate from this.)
 
+**A clean machine, before GitHub sees it.** `scripts/ci-docker.sh` runs the same checks inside an
+`ubuntu:24.04` container with only the packages the workflow installs, as an ordinary user (as the runner
+is: as root, file permissions mean nothing and the read-only-file tests fail for no real reason). It needs
+Docker, takes a few minutes the first time and is quick after (the toolchain and build output live in
+named volumes). Pass `--quick`, or set `NOTEY_DOCKER_CMD` to run one thing, for example
+`NOTEY_DOCKER_CMD='xvfb-run -a cargo test --test headless_gtk -- session_scroll' scripts/ci-docker.sh`.
+It reproduced a failure that only the runner showed, which the host machine never did.
+
 Whatever passes `scripts/ci.sh` here should pass on GitHub except for timing: the runner is slower, so
 tests wait for conditions instead of sleeping fixed times.
 
