@@ -43,7 +43,7 @@ mkdir -p target
 log=target/ci-test.log
 stage "tests: unit, properties, fixtures, window scenarios, process smoke"
 # shellcheck disable=SC2086
-if ! $run cargo test --locked 2>&1 | tee "$log"; then
+if ! $run cargo test --locked --no-fail-fast 2>&1 | tee "$log"; then
     echo "ci: tests failed; full output in $log" >&2
     exit 1
 fi

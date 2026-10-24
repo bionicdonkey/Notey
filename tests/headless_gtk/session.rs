@@ -49,7 +49,11 @@ pub fn scenarios() -> Vec<Scenario> {
             let w1 = env.window(&sb);
             let typed = w1.current_doc().unwrap();
             append(&typed, "typed before the crash");
-            pump_for(1400); // past the one second debounce
+            // The snapshot is written a second after the last edit, by a background thread.
+            wait_for_buffer_file(&sb, &typed.id, true);
+            pump_until("the manifest to list the tab as unsaved", || {
+                std::fs::read_to_string(sb.session_dir().join("session.json")).is_ok_and(|m| m.contains("\"dirty\": true") && m.contains(&typed.id))
+            });
             // The first window is abandoned: nothing flushes and nothing saves, as after kill -9.
             let w2 = env.window(&sb);
             let docs = w2.docs_in_order();
@@ -62,9 +66,8 @@ pub fn scenarios() -> Vec<Scenario> {
             let win = env.window(&sb);
             let doc = open_ok(&win, &file);
             append(&doc, "changed in the editor");
-            pump_for(1400);
+            wait_for_buffer_file(&sb, &doc.id, true);
             assert_eq!(sb.read("keep.txt"), b"original\n");
-            assert!(sb.buffer_file(&doc.id).exists(), "the edit is in the private session copy");
             win.snapshot_all();
             win.shutdown(false);
             assert_eq!(sb.read("keep.txt"), b"original\n");
@@ -75,12 +78,10 @@ pub fn scenarios() -> Vec<Scenario> {
             let win = env.window(&sb);
             let doc = open_ok(&win, &file);
             append(&doc, "two\n");
-            pump_for(1300);
-            assert!(sb.buffer_file(&doc.id).exists());
+            wait_for_buffer_file(&sb, &doc.id, true);
             assert!(save(&win, &doc));
-            pump_for(200);
+            wait_for_buffer_file(&sb, &doc.id, false);
             assert_eq!(sb.read("s.txt"), b"one\ntwo\n");
-            assert!(!sb.buffer_file(&doc.id).exists());
             assert!(!doc.is_dirty());
             let manifest = win.build_session();
             assert!(manifest.tabs[0].buffer_file.is_none() && !manifest.tabs[0].dirty);
@@ -90,12 +91,10 @@ pub fn scenarios() -> Vec<Scenario> {
             let win = env.window(&sb);
             let d = win.current_doc().unwrap();
             append(&d, "x");
-            pump_for(1300);
-            assert!(sb.buffer_file(&d.id).exists());
+            wait_for_buffer_file(&sb, &d.id, true);
             d.set_text("", false);
             win.snapshot(&d);
-            pump_for(150);
-            assert!(!sb.buffer_file(&d.id).exists());
+            wait_for_buffer_file(&sb, &d.id, false);
         }),
         scenario("session_closed_tab_reopens_with_its_unsaved_text", |env| {
             let sb = env.sandbox();

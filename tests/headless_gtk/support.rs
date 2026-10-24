@@ -175,6 +175,12 @@ pub fn discard_tab(win: &NoteyWindow, doc: &Rc<notey::ui::doc::Doc>) {
     pump_for(20);
 }
 
+/// Waits for the background writer to put the tab's unsaved text on disk (or take it away).
+pub fn wait_for_buffer_file(sb: &Sandbox, doc_id: &str, present: bool) {
+    let path = sb.buffer_file(doc_id);
+    pump_until(if present { "the snapshot file to be written" } else { "the snapshot file to be removed" }, || path.exists() == present);
+}
+
 pub fn info_rows(doc: &notey::ui::doc::Doc) -> usize {
     let mut n = 0;
     let mut c = doc.info.first_child();
