@@ -4,6 +4,8 @@
 libadwaita and GtkSourceView 5. It is built for GNOME and Zorin OS and looks and behaves like a
 native app: it follows the system light and dark theme and uses standard shortcuts.
 
+![Notey editing a Rust file in a second tab, with syntax highlighting and the quick-actions bar](docs/images/screenshot.png)
+
 ## Purpose
 
 Notey is a simple, native text editor for the GNOME desktop, in the spirit of Notepad++ and Windows
