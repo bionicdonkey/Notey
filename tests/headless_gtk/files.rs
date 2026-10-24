@@ -268,8 +268,10 @@ pub fn scenarios() -> Vec<Scenario> {
         scenario("files_several_files_open_in_the_order_given", |env| {
             let sb = env.sandbox();
             let win = env.window(&sb);
-            // Different sizes so a concurrent open would finish out of order.
-            let big = sb.write("c_big.txt", "x\n".repeat(400_000));
+            // Larger than the other two so a concurrent open would finish out of order. Kept modest:
+            // opening presents the window, and a huge visible buffer keeps GTK busy laying it out,
+            // which starves GtkSourceView's background search in the scenarios that run afterwards.
+            let big = sb.write("c_big.txt", "x\n".repeat(20_000));
             let a = sb.write("a.txt", "a");
             let b = sb.write("b.txt", "b");
             win.open_in_background(vec![(big, None), (a, Some(1)), (b, None)]);
