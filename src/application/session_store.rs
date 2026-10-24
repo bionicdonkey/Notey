@@ -372,8 +372,9 @@ enum Job {
     Buffer { file: String, text: String },
     RemoveBuffer(String),
     Manifest(Session),
-    /// Forget everything stored. Runs in queue order, after the writes queued before it.
-    Clear,
+    /// Delete every buffer file the given session does not refer to. Queued after the manifest that
+    /// session came from, so what the stored manifest points at is never removed.
+    Prune(Session),
 }
 
 impl Job {
@@ -381,7 +382,7 @@ impl Job {
         match self {
             Job::Buffer { file, .. } | Job::RemoveBuffer(file) => format!("buf:{file}"),
             Job::Manifest(_) => "manifest".into(),
-            Job::Clear => "clear".into(),
+            Job::Prune(_) => "prune".into(),
         }
     }
 }
@@ -434,8 +435,8 @@ impl SessionWriter {
                                 Ok(())
                             }
                             Job::Manifest(s) => store.save_manifest(s),
-                            Job::Clear => {
-                                store.clear();
+                            Job::Prune(s) => {
+                                store.remove_orphans(s);
                                 Ok(())
                             }
                         };
@@ -464,10 +465,11 @@ impl SessionWriter {
         let _ = self.tx.send(Msg::Job(Job::Manifest(session)));
     }
 
-    /// Deletes the stored session (after anything already queued). Callers that still have unsaved
-    /// tabs must write them again afterwards.
-    pub fn clear(&self) {
-        let _ = self.tx.send(Msg::Job(Job::Clear));
+    /// Deletes every stored buffer file `session` does not refer to (closed tabs' text, leftovers).
+    /// Queue the manifest for the same session first: files the stored manifest points at must
+    /// never disappear, not even for an instant.
+    pub fn prune(&self, session: Session) {
+        let _ = self.tx.send(Msg::Job(Job::Prune(session)));
     }
 
     /// Blocks until everything queued so far is on disk. Returns write errors since the last flush.
@@ -538,18 +540,22 @@ mod writer_tests {
     }
 
     #[test]
-    fn clear_runs_after_earlier_writes_and_before_later_ones() {
+    fn prune_removes_only_what_the_session_no_longer_refers_to() {
         let d = tempfile::tempdir().unwrap();
         let dir = d.path().join("s");
         let w = SessionWriter::start(SessionStore::new(dir.clone()));
-        w.write_buffer("old.txt".into(), "old".into());
-        w.write_manifest(Session::default());
-        w.clear();
-        w.write_buffer("new.txt".into(), "new".into());
+        let mut open = TabRecord::new_untitled("open");
+        open.buffer_file = Some("open.txt".into());
+        let mut keep = Session::default();
+        keep.tabs.push(open);
+        w.write_buffer("open.txt".into(), "still needed".into());
+        w.write_buffer("closed.txt".into(), "history".into());
+        w.write_manifest(keep.clone());
+        w.prune(keep);
         assert!(w.flush().is_empty());
-        assert!(!dir.join("buffers/old.txt").exists(), "cleared");
-        assert!(!dir.join("session.json").exists(), "cleared");
-        assert_eq!(fs::read_to_string(dir.join("buffers/new.txt")).unwrap(), "new", "written after the clear");
+        assert_eq!(fs::read_to_string(dir.join("buffers/open.txt")).unwrap(), "still needed");
+        assert!(!dir.join("buffers/closed.txt").exists(), "unreferenced copy is gone");
+        assert!(dir.join("session.json").exists(), "the manifest is never removed");
     }
 
     #[test]

@@ -286,19 +286,28 @@ pub fn scenarios() -> Vec<Scenario> {
             let win2 = env.window(&sb);
             assert_eq!(win2.current_doc().unwrap().text(), "do not lose me");
         }),
-        scenario("session_clearing_the_saved_session_keeps_open_unsaved_tabs_safe", |env| {
+        scenario("session_clearing_the_saved_session_forgets_history_but_keeps_open_unsaved_tabs", |env| {
             let sb = env.sandbox();
             let win = env.window(&sb);
-            let d = win.current_doc().unwrap();
-            append(&d, "still open and unsaved");
-            wait_for_buffer_file(&sb, &d.id, true);
+            let open = win.current_doc().unwrap();
+            append(&open, "still open and unsaved");
+            let gone = win.new_tab();
+            append(&gone, "closed and forgotten");
+            wait_for_buffer_file(&sb, &open.id, true);
+            wait_for_buffer_file(&sb, &gone.id, true);
+            discard_tab(&win, &gone);
+            assert_eq!(win.closed.borrow().len(), 1, "the closed tab is in the history");
+
             win.clear_saved_session();
-            // The stored copy is rewritten for the tab that is still open ...
-            wait_for_buffer_file(&sb, &d.id, true);
-            assert_eq!(std::fs::read_to_string(sb.buffer_file(&d.id)).unwrap(), "still open and unsaved");
-            // ... so a crash right now still loses nothing.
+            let writer_done = || win.writer.borrow().as_ref().map(|w| w.flush());
+            writer_done();
+            assert!(win.closed.borrow().is_empty(), "history forgotten");
+            assert!(!sb.buffer_file(&gone.id).exists(), "the closed tab's text is deleted");
+            // The tab that is still open kept its safety copy the whole time.
+            assert_eq!(std::fs::read_to_string(sb.buffer_file(&open.id)).unwrap(), "still open and unsaved");
             let w2 = env.window(&sb);
-            assert_eq!(w2.current_doc().unwrap().text(), "still open and unsaved");
+            assert_eq!(w2.current_doc().unwrap().text(), "still open and unsaved", "a crash right now loses nothing");
+            assert!(w2.closed.borrow().is_empty());
         }),
         scenario("session_closing_the_last_tab_leaves_a_fresh_untitled_one", |env| {
             let sb = env.sandbox();

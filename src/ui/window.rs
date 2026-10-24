@@ -724,17 +724,17 @@ impl Notey {
         s
     }
 
-    /// "Clear saved session": forget what is stored, but keep every open tab's unsaved text safe by
-    /// writing it again straight away. Going through the writer thread keeps the order right.
+    /// "Clear saved session": forget the history (closed tabs and their text) and any leftovers, while
+    /// every open tab stays protected. The manifest for the open tabs is written first and only then
+    /// is everything it does not mention deleted, so at no instant is a needed file missing.
     pub fn clear_saved_session(&self) {
-        if let Some(w) = self.writer.borrow().as_ref() {
-            w.clear();
-        }
-        for d in self.docs.borrow().iter() {
-            d.has_buffer_file.set(false); // so the next snapshot writes the text again
-        }
+        self.closed.borrow_mut().clear();
         self.snapshot_all();
-        self.write_manifest_now();
+        let session = self.build_session();
+        if let Some(w) = self.writer.borrow().as_ref() {
+            w.write_manifest(session.clone());
+            w.prune(session);
+        }
     }
 
     /// True when the manifest would include a tab that is not a document (it never should).
