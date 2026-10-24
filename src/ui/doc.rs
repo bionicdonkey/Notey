@@ -231,9 +231,13 @@ impl Doc {
         it.line().max(0) as u32
     }
 
-    /// Scrolls so `line` is at the top. This goes through a mark: GTK computes line heights lazily,
-    /// and `scroll_to_iter` silently does nothing for a far-away line until they are known, while a
-    /// mark keeps the request and applies it once the layout has been validated.
+    /// Scrolls so `line` is at the top.
+    ///
+    /// Two mechanisms, because neither alone is reliable. A mark makes GTK defer the scroll until line
+    /// heights are known (a plain `scroll_to_iter` silently does nothing for a distant line before
+    /// that), but on some setups GTK never applies the pending scroll even once the layout is
+    /// complete. So a short retry loop also sets the adjustment from the line's real position, until
+    /// the line is at the top or the view cannot scroll any further.
     pub fn scroll_to_line_top(&self, line: u32) {
         let it = self.iter_at(Cursor { line, column: 0 });
         let mark = match self.buffer.mark("notey-scroll") {
@@ -244,6 +248,27 @@ impl Doc {
             None => self.buffer.create_mark(Some("notey-scroll"), &it, true),
         };
         self.view.scroll_to_mark(&mark, 0.0, true, 0.0, 0.0);
+
+        let (view, buffer) = (self.view.clone(), self.buffer.clone());
+        let target = it.line();
+        let mut tries = 0;
+        glib::timeout_add_local(std::time::Duration::from_millis(30), move || {
+            tries += 1;
+            let Some(adj) = view.vadjustment() else { return glib::ControlFlow::Break };
+            let at_top = |view: &sourceview5::View| view.line_at_y(view.visible_rect().y()).0.line() == target;
+            if at_top(&view) {
+                return glib::ControlFlow::Break;
+            }
+            if let Some(it) = buffer.iter_at_line(target) {
+                adj.set_value(f64::from(view.iter_location(&it).y()));
+            }
+            let at_bottom = adj.value() >= adj.upper() - adj.page_size() - 1.0 && adj.upper() > adj.page_size();
+            if at_top(&view) || at_bottom || tries >= 40 {
+                glib::ControlFlow::Break
+            } else {
+                glib::ControlFlow::Continue
+            }
+        });
     }
 
     /// Centres the caret, deferring until line heights are known (see `scroll_to_line_top`).
