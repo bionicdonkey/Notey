@@ -12,6 +12,11 @@
   <content_rating type="oars-1.1"/>
   <!-- Keep in step with `version` in Cargo.toml. -->
   <releases>
+    <release version="0.1.1" date="2026-10-25">
+      <description>
+        <p>Registers many more file types and adds Preferences switches to make Notey the default app for each family of them.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-24">
       <description>
         <p>First release: persistent tabs, syntax highlighting, comment toggling, find and replace with regular expressions, encoding and line-ending conversion, and preferences including the indent width.</p>
