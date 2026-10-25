@@ -6,11 +6,14 @@
 #
 #   scripts/dev-install.sh                 launcher for target/debug/notey
 #   scripts/dev-install.sh --release       launcher for target/release/notey
+#   scripts/dev-install.sh --set-default   also make Notey the default app for every type it handles
 #   scripts/dev-install.sh --uninstall     remove what this script installed
 #
 # Everything goes under $XDG_DATA_HOME (default ~/.local/share); nothing needs root. Start the app
 # again afterwards (the shell reads the launcher when a window first appears).
 set -eu
+
+set_default=
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 data="${XDG_DATA_HOME:-$HOME/.local/share}"
@@ -33,9 +36,10 @@ case "${1:-}" in
     exit 0
     ;;
 --release) profile=release ;;
+--set-default) profile=debug; set_default=1 ;;
 "") profile=debug ;;
 *)
-    echo "usage: $0 [--release | --uninstall]" >&2
+    echo "usage: $0 [--release | --set-default | --uninstall]" >&2
     exit 2
     ;;
 esac
@@ -53,6 +57,13 @@ cp "$root/resources/icons/hicolor/symbolic/apps/$id-symbolic.svg" "$symbolic/$id
 sed "s|^Exec=.*|Exec=$binary %F|" "$root/resources/$id.desktop" > "$apps/$id.desktop"
 chmod 644 "$apps/$id.desktop"
 refresh
+if [ -n "$set_default" ]; then
+    command -v xdg-mime > /dev/null 2>&1 || { echo "dev-install: xdg-mime not found" >&2; exit 1; }
+    mimes="$(sed -n 's/^MimeType=//p' "$root/resources/$id.desktop" | tr ';' ' ')"
+    # shellcheck disable=SC2086
+    xdg-mime default "$id.desktop" $mimes
+    echo "Notey is now the default for: $mimes"
+fi
 echo "installed a launcher for $binary"
 echo "  $apps/$id.desktop"
 echo "Quit and start Notey again; the taskbar should now show the icon."

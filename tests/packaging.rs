@@ -74,3 +74,13 @@ fn the_metainfo_release_matches_the_crate_version() {
     let version = env!("CARGO_PKG_VERSION");
     assert!(read("packaging/com.zorin.Notey.metainfo.xml").contains(&format!("<release version=\"{version}\"")), "add a <release> for {version}");
 }
+
+#[test]
+fn every_file_type_offered_as_a_default_is_in_the_desktop_file() {
+    let mimes = desktop_key("MimeType");
+    let source = read("src/ui/preferences.rs");
+    let table = source.split("const FILE_TYPE_GROUPS").nth(1).and_then(|t| t.split("];").next()).expect("FILE_TYPE_GROUPS");
+    for m in table.split('"').skip(1).step_by(2).filter(|s| s.contains('/')) {
+        assert!(mimes.split(';').any(|x| x == m), "{m} is offered in Preferences but missing from MimeType");
+    }
+}

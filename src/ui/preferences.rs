@@ -20,6 +20,22 @@ pub const CATEGORIES: [&str; 8] = [
     "About",
 ];
 
+const APP_DESKTOP_ID: &str = "com.zorin.Notey.desktop";
+
+/// File types Notey can be the default app for, grouped so one switch covers a family of
+/// MIME types. Every entry must also be in the MimeType= line of the desktop file.
+const FILE_TYPE_GROUPS: [(&str, &[&str]); 9] = [
+    ("Plain text", &["text/plain", "text/x-log", "text/x-readme", "text/x-changelog", "text/x-copying", "text/x-authors", "text/x-install"]),
+    ("Markdown", &["text/markdown"]),
+    ("Source code", &["text/x-csrc", "text/x-chdr", "text/x-c++src", "text/x-python", "text/x-script.python", "text/x-rust", "text/x-java", "text/x-go", "text/x-lua", "text/x-perl", "text/x-ruby", "text/x-php", "text/x-sql", "application/sql", "text/x-tex", "text/x-cmake", "text/x-makefile"]),
+    ("Shell scripts", &["text/x-shellscript", "application/x-shellscript"]),
+    ("JavaScript and TypeScript", &["text/javascript", "text/x-javascript", "application/javascript", "application/x-javascript", "text/jsx", "text/x-typescript"]),
+    ("JSON, YAML and TOML", &["application/json", "application/ld+json", "application/x-yaml", "text/x-toml", "application/toml"]),
+    ("XML and HTML", &["text/xml", "application/xml", "text/html", "application/xhtml+xml"]),
+    ("Config and stylesheets", &["text/x-ini", "application/x-ini", "application/x-desktop", "text/css", "text/x-scss", "text/x-sass", "text/x-less"]),
+    ("Diffs and tables", &["text/x-diff", "text/x-patch", "text/csv", "text/x-csv", "text/tab-separated-values"]),
+];
+
 const MARGINS: [u32; 5] = [0, 72, 80, 100, 120];
 
 fn slug(category: &str) -> String {
@@ -316,7 +332,51 @@ impl Notey {
         p.append(&heading("Line endings"));
         let current = self.settings.borrow().default_line_ending;
         self.pref_radio(&p, &[("LF (Unix, macOS)", LineEnding::Lf), ("CRLF (Windows)", LineEnding::Crlf), ("CR (classic Mac)", LineEnding::Cr)], current, |s, v| s.default_line_ending = v);
+        self.file_types_section(&p);
         p
+    }
+
+    /// One switch per family of file types: on makes Notey the system default for those types,
+    /// off resets them to the system's own choice. The system is the source of truth, so nothing
+    /// is stored in the settings.
+    fn file_types_section(self: &Rc<Self>, p: &GtkBox) {
+        p.append(&heading("Default app"));
+        let Some(app) = gio::DesktopAppInfo::new(APP_DESKTOP_ID) else {
+            p.append(&note("Notey is not installed with a launcher, so it cannot be chosen as a default app. Install the package, or run scripts/dev-install.sh when running from the source tree."));
+            return;
+        };
+        p.append(&note("Open these kinds of files in Notey when you double-click them in the file manager."));
+        let app: gio::AppInfo = app.upcast();
+        for (name, mimes) in FILE_TYPE_GROUPS {
+            let row = GtkBox::new(Orientation::Horizontal, 12);
+            row.append(&row_label(name));
+            let switch = gtk::Switch::new();
+            switch.set_valign(gtk::Align::Center);
+            switch.set_tooltip_text(Some(&mimes.join("\n")));
+            let is_default = |m: &&str| gio::AppInfo::default_for_type(m, false).is_some_and(|d| d.id().as_deref() == Some(APP_DESKTOP_ID));
+            switch.set_active(mimes.iter().all(is_default));
+            let weak = Rc::downgrade(self);
+            let app = app.clone();
+            switch.connect_state_set(move |sw, on| {
+                let result = mimes.iter().try_for_each(|m| {
+                    if on {
+                        app.set_as_default_for_type(m)
+                    } else if gio::AppInfo::default_for_type(m, false).is_some_and(|d| d.id().as_deref() == Some(APP_DESKTOP_ID)) {
+                        gio::AppInfo::reset_type_associations(m);
+                        Ok(())
+                    } else {
+                        Ok(())
+                    }
+                });
+                if let (Err(e), Some(t)) = (&result, weak.upgrade()) {
+                    t.toast(&format!("Could not change the default app: {e}"));
+                }
+                sw.set_state(on && result.is_ok());
+                glib::Propagation::Stop
+            });
+            row.append(&switch);
+            p.append(&row);
+        }
     }
 
     fn privacy_page(self: &Rc<Self>) -> GtkBox {
