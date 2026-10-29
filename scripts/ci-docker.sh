@@ -5,7 +5,7 @@
 #
 #   scripts/ci-docker.sh                 scripts/ci.sh (everything)
 #   scripts/ci-docker.sh --quick         scripts/ci.sh --quick
-#   NOTEY_DOCKER_CMD='xvfb-run -a cargo test --test headless_gtk -- session_scroll' scripts/ci-docker.sh
+#   NOTEY_DOCKER_CMD='NOTEY_ISOLATED_DISPLAY=1 xvfb-run -a cargo test --test headless_gtk -- session_scroll' scripts/ci-docker.sh
 #                                        any other command, from the repository root
 #
 # NOTEY_DOCKER_FLAGS adds docker options, e.g. NOTEY_DOCKER_FLAGS=--cpus=1 to imitate a small runner.

@@ -5,7 +5,8 @@
 #   scripts/ci.sh            everything
 #   scripts/ci.sh --quick    skip clippy and the release build (what to run while developing)
 #
-# Window and process tests need a display; without one this script wraps cargo in `xvfb-run -a`.
+# Window and process tests open real windows, so this script always runs them under `xvfb-run -a`,
+# even from a desktop session, and never on your own screen. NOTEY_ALLOW_REAL_DISPLAY=1 opts out.
 # NOTEY_REQUIRE_DISPLAY makes a missing display a failure rather than a silent skip, and
 # NOTEY_STRICT_WARNINGS fails a window scenario on any GLib/GTK warning or critical.
 set -eu
@@ -30,13 +31,16 @@ if [ "$quick" -eq 0 ]; then
     cargo clippy --locked --all-targets -- -D warnings
 fi
 
+# The tests refuse a display unless told it is not the user's own session.
+export NOTEY_ISOLATED_DISPLAY=1
 run=""
-if [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
-    if ! command -v xvfb-run > /dev/null 2>&1; then
-        echo "ci: no display and no xvfb-run; install xvfb or run this from a desktop session" >&2
-        exit 1
-    fi
+if [ -n "${NOTEY_ALLOW_REAL_DISPLAY:-}" ] && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    :
+elif command -v xvfb-run > /dev/null 2>&1; then
     run="xvfb-run -a"
+else
+    echo "ci: no xvfb-run; install xvfb (or set NOTEY_ALLOW_REAL_DISPLAY=1 to open windows on your own session)" >&2
+    exit 1
 fi
 
 # Where the test output is kept (CI uploads it). The Docker wrapper points this at a writable volume.

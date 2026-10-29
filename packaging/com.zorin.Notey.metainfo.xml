@@ -12,6 +12,11 @@
   <content_rating type="oars-1.1"/>
   <!-- Keep in step with `version` in Cargo.toml. -->
   <releases>
+    <release version="0.1.2" date="2026-10-29">
+      <description>
+        <p>Preferences lists each file extension with a dropdown to choose its default app, grouped and shown as a table. The tests no longer open windows on your own desktop session.</p>
+      </description>
+    </release>
     <release version="0.1.1" date="2026-10-25">
       <description>
         <p>Registers many more file types and adds Preferences switches to make Notey the default app for each family of them.</p>

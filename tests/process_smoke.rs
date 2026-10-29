@@ -1,12 +1,15 @@
 //! Runs the real binary: startup, session persistence across a hard kill, and clean shutdown.
-//! Needs a display (`xvfb-run -a cargo test`); skipped without one unless NOTEY_REQUIRE_DISPLAY=1.
+//! Needs an isolated display (`NOTEY_ISOLATED_DISPLAY=1 xvfb-run -a cargo test`); skipped without one unless NOTEY_REQUIRE_DISPLAY=1.
 use notey::core::session::Session;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
+/// A display counts only when the caller says it is not the user's own session
+/// (NOTEY_ISOLATED_DISPLAY, set by scripts/ci.sh) or opts in (NOTEY_ALLOW_REAL_DISPLAY).
 fn has_display() -> bool {
-    std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some()
+    let shown = std::env::var_os("DISPLAY").is_some() || std::env::var_os("WAYLAND_DISPLAY").is_some();
+    shown && (std::env::var_os("NOTEY_ISOLATED_DISPLAY").is_some() || std::env::var_os("NOTEY_ALLOW_REAL_DISPLAY").is_some())
 }
 
 /// `false` means "skip this test".

@@ -54,3 +54,20 @@
 .quick-drop {
   border-top: 2px solid @accent_bg_color;
 }
+
+.notey-table {
+  border: 1px solid alpha(currentColor, 0.15);
+  border-radius: 6px;
+}
+
+.notey-table > row {
+  padding: 0;
+}
+
+.notey-table > row > box {
+  padding: 5px 10px;
+}
+
+.notey-table .notey-row-odd {
+  background-color: alpha(currentColor, 0.06);
+}

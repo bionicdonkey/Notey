@@ -7,7 +7,10 @@ scripts/ci.sh            # core purity, clippy -D warnings, every test, release 
 scripts/ci.sh --quick    # skip clippy and the release build while developing
 ```
 
-Without a display the script wraps cargo in `xvfb-run -a` (`sudo apt install xvfb`). It sets
+The script always wraps cargo in `xvfb-run -a` (`sudo apt install xvfb`), even from a desktop session, so
+the tests never open windows on your own screen (`NOTEY_ALLOW_REAL_DISPLAY=1` opts out). The window and
+process tests ignore any display unless `NOTEY_ISOLATED_DISPLAY` or `NOTEY_ALLOW_REAL_DISPLAY` is set, so a
+plain `cargo test` skips them rather than using your session. It sets
 `NOTEY_REQUIRE_DISPLAY=1` so a missing display fails instead of silently skipping tests, and
 `NOTEY_STRICT_WARNINGS=1` so a GLib/GTK warning or critical fails the window scenario that caused it.
 
@@ -17,8 +20,7 @@ Without a display the script wraps cargo in `xvfb-run -a` (`sudo apt install xvf
 scripts/install-hooks.sh        # once per clone: turns on the pre-push hook
 ```
 
-The **pre-push hook** runs `scripts/ci.sh --quick` (core purity and every test, under `xvfb-run` when
-there is no display) and stops the push if anything fails. `git push --no-verify` skips it, and it skips
+The **pre-push hook** runs `scripts/ci.sh --quick` (core purity and every test, always under `xvfb-run`) and stops the push if anything fails. `git push --no-verify` skips it, and it skips
 itself when the newest commit carries the no-build marker (see "Skipping a build" below).
 `scripts/install-hooks.sh --remove` turns it off.
 
@@ -35,7 +37,7 @@ separate from this.)
 is: as root, file permissions mean nothing and the read-only-file tests fail for no real reason). It needs
 Docker, takes a few minutes the first time and is quick after (the toolchain and build output live in
 named volumes). Pass `--quick`, or set `NOTEY_DOCKER_CMD` to run one thing, for example
-`NOTEY_DOCKER_CMD='xvfb-run -a cargo test --test headless_gtk -- session_scroll' scripts/ci-docker.sh`.
+`NOTEY_DOCKER_CMD='NOTEY_ISOLATED_DISPLAY=1 xvfb-run -a cargo test --test headless_gtk -- session_scroll' scripts/ci-docker.sh`.
 It reproduced a failure that only the runner showed, which the host machine never did.
 
 Whatever passes `scripts/ci.sh` here should pass on GitHub except for timing: the runner is slower, so
@@ -85,9 +87,9 @@ GTK may only be initialised once per process, so `tests/headless_gtk` has its ow
 named scenarios one after another, each in its own temporary profile:
 
 ```bash
-xvfb-run -a cargo test --test headless_gtk                  # all of them
-xvfb-run -a cargo test --test headless_gtk -- find          # names containing "find"
-NOTEY_STRICT_WARNINGS=1 xvfb-run -a cargo test --test headless_gtk
+NOTEY_ISOLATED_DISPLAY=1 xvfb-run -a cargo test --test headless_gtk                  # all of them
+NOTEY_ISOLATED_DISPLAY=1 xvfb-run -a cargo test --test headless_gtk -- find          # names containing "find"
+NOTEY_ISOLATED_DISPLAY=1 NOTEY_STRICT_WARNINGS=1 xvfb-run -a cargo test --test headless_gtk
 ```
 
 Output is one `scenario <name> ... ok` line each, a failure message under any that fail, and a

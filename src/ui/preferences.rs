@@ -7,6 +7,7 @@ use crate::core::line_ending::LineEnding;
 use crate::settings::{Settings, ThemeChoice, MAX_INDENT_WIDTH, MIN_INDENT_WIDTH};
 use adw::prelude::*;
 use gtk::{Box as GtkBox, Button, CheckButton, DropDown, Entry, Label, Orientation, SpinButton};
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 pub const CATEGORIES: [&str; 8] = [
@@ -22,18 +23,16 @@ pub const CATEGORIES: [&str; 8] = [
 
 const APP_DESKTOP_ID: &str = "com.zorin.Notey.desktop";
 
-/// File types Notey can be the default app for, grouped so one switch covers a family of
-/// MIME types. Every entry must also be in the MimeType= line of the desktop file.
-const FILE_TYPE_GROUPS: [(&str, &[&str]); 9] = [
-    ("Plain text", &["text/plain", "text/x-log", "text/x-readme", "text/x-changelog", "text/x-copying", "text/x-authors", "text/x-install"]),
-    ("Markdown", &["text/markdown"]),
-    ("Source code", &["text/x-csrc", "text/x-chdr", "text/x-c++src", "text/x-python", "text/x-script.python", "text/x-rust", "text/x-java", "text/x-go", "text/x-lua", "text/x-perl", "text/x-ruby", "text/x-php", "text/x-sql", "application/sql", "text/x-tex", "text/x-cmake", "text/x-makefile"]),
-    ("Shell scripts", &["text/x-shellscript", "application/x-shellscript"]),
-    ("JavaScript and TypeScript", &["text/javascript", "text/x-javascript", "application/javascript", "application/x-javascript", "text/jsx", "text/x-typescript"]),
-    ("JSON, YAML and TOML", &["application/json", "application/ld+json", "application/x-yaml", "text/x-toml", "application/toml"]),
-    ("XML and HTML", &["text/xml", "application/xml", "text/html", "application/xhtml+xml"]),
-    ("Config and stylesheets", &["text/x-ini", "application/x-ini", "application/x-desktop", "text/css", "text/x-scss", "text/x-sass", "text/x-less"]),
-    ("Diffs and tables", &["text/x-diff", "text/x-patch", "text/csv", "text/x-csv", "text/tab-separated-values"]),
+/// File extensions offered under "Default app", grouped for reading. Each one is turned into a
+/// MIME type by the system's own database, so the rows follow what the file manager will do.
+const FILE_TYPE_GROUPS: [(&str, &[&str]); 7] = [
+    ("Text and documents", &["txt", "log", "md", "markdown", "tex", "csv", "tsv"]),
+    ("C and C++", &["c", "h", "cpp", "cc", "hpp"]),
+    ("Scripting languages", &["py", "sh", "pl", "rb", "php", "lua", "sql"]),
+    ("Other languages", &["rs", "go", "java", "cmake", "mk"]),
+    ("Web", &["html", "htm", "css", "scss", "js", "mjs", "xml"]),
+    ("Data and config", &["json", "yaml", "yml", "toml", "ini", "desktop"]),
+    ("Patches", &["diff", "patch"]),
 ];
 
 const MARGINS: [u32; 5] = [0, 72, 80, 100, 120];
@@ -336,46 +335,79 @@ impl Notey {
         p
     }
 
-    /// One switch per family of file types: on makes Notey the system default for those types,
-    /// off resets them to the system's own choice. The system is the source of truth, so nothing
-    /// is stored in the settings.
+    /// A table per group of file extensions, one app dropdown per row: choosing an app makes it the
+    /// system default for that extension's type. Extensions that share a type (`.yaml` and `.yml`)
+    /// move together. The system is the source of truth, so nothing is stored in the settings.
     fn file_types_section(self: &Rc<Self>, p: &GtkBox) {
         p.append(&heading("Default app"));
-        let Some(app) = gio::DesktopAppInfo::new(APP_DESKTOP_ID) else {
+        let Some(this_app) = gio::DesktopAppInfo::new(APP_DESKTOP_ID) else {
             p.append(&note("Notey is not installed with a launcher, so it cannot be chosen as a default app. Install the package, or run scripts/dev-install.sh when running from the source tree."));
             return;
         };
-        p.append(&note("Open these kinds of files in Notey when you double-click them in the file manager."));
-        let app: gio::AppInfo = app.upcast();
-        for (name, mimes) in FILE_TYPE_GROUPS {
-            let row = GtkBox::new(Orientation::Horizontal, 12);
-            row.append(&row_label(name));
-            let switch = gtk::Switch::new();
-            switch.set_valign(gtk::Align::Center);
-            switch.set_tooltip_text(Some(&mimes.join("\n")));
-            let is_default = |m: &&str| gio::AppInfo::default_for_type(m, false).is_some_and(|d| d.id().as_deref() == Some(APP_DESKTOP_ID));
-            switch.set_active(mimes.iter().all(is_default));
-            let weak = Rc::downgrade(self);
-            let app = app.clone();
-            switch.connect_state_set(move |sw, on| {
-                let result = mimes.iter().try_for_each(|m| {
-                    if on {
-                        app.set_as_default_for_type(m)
-                    } else if gio::AppInfo::default_for_type(m, false).is_some_and(|d| d.id().as_deref() == Some(APP_DESKTOP_ID)) {
-                        gio::AppInfo::reset_type_associations(m);
-                        Ok(())
-                    } else {
-                        Ok(())
+        p.append(&note("Choose which app opens each kind of file when you double-click it in the file manager. Extensions that share a type change together."));
+        let supported: Vec<String> = gio::AppInfo::from(this_app).supported_types().iter().map(|t| t.to_string()).collect();
+        let dropdowns: Rc<RefCell<Vec<(String, DropDown)>>> = Rc::default();
+        let syncing = Rc::new(Cell::new(false));
+        for (group, exts) in FILE_TYPE_GROUPS {
+            // An extension the database calls plain text would change .txt as well, and one it does
+            // not know, or Notey does not declare, could not be honoured; leave those out.
+            let rows: Vec<(&str, String)> = exts
+                .iter()
+                .filter_map(|ext| {
+                    let (mime, _) = gio::content_type_guess(Some(format!("x.{ext}")), &[]);
+                    let mime = mime.to_string();
+                    (supported.contains(&mime) && (mime != "text/plain" || *ext == "txt")).then_some((*ext, mime))
+                })
+                .collect();
+            if rows.is_empty() {
+                continue;
+            }
+            p.append(&heading(group));
+            let table = gtk::ListBox::new();
+            table.set_selection_mode(gtk::SelectionMode::None);
+            table.add_css_class("notey-table");
+            for (i, (ext, mime)) in rows.into_iter().enumerate() {
+                let row = GtkBox::new(Orientation::Horizontal, 12);
+                row.add_css_class(if i % 2 == 0 { "notey-row-even" } else { "notey-row-odd" });
+                let ext_label = Label::new(Some(&format!(".{ext}")));
+                ext_label.set_xalign(0.0);
+                ext_label.set_width_chars(10);
+                ext_label.add_css_class("monospace");
+                row.append(&ext_label);
+                let mime_label = row_label(&mime);
+                mime_label.add_css_class("dim-label");
+                row.append(&mime_label);
+                let apps: Vec<gio::AppInfo> = gio::AppInfo::all_for_type(&mime).into_iter().filter(|a| a.should_show()).collect();
+                let names: Vec<String> = apps.iter().map(|a| a.display_name().to_string()).collect();
+                let current = gio::AppInfo::default_for_type(&mime, false).and_then(|d| apps.iter().position(|a| a.id() == d.id()));
+                let dropdown = DropDown::from_strings(&names.iter().map(String::as_str).collect::<Vec<_>>());
+                dropdown.set_valign(gtk::Align::Center);
+                dropdown.set_selected(current.map_or(gtk::INVALID_LIST_POSITION, |i| i as u32));
+                dropdowns.borrow_mut().push((mime.clone(), dropdown.clone()));
+                let weak = Rc::downgrade(self);
+                let (dropdowns, syncing) = (dropdowns.clone(), syncing.clone());
+                dropdown.connect_selected_notify(move |dd| {
+                    let Some(app) = apps.get(dd.selected() as usize) else { return };
+                    if syncing.get() {
+                        return;
                     }
+                    if let Err(e) = app.set_as_default_for_type(&mime) {
+                        if let Some(t) = weak.upgrade() {
+                            t.toast(&format!("Could not change the default app: {e}"));
+                        }
+                        return;
+                    }
+                    syncing.set(true);
+                    for (_, other) in dropdowns.borrow().iter().filter(|(m, o)| *m == mime && o != dd) {
+                        other.set_selected(dd.selected());
+                    }
+                    syncing.set(false);
                 });
-                if let (Err(e), Some(t)) = (&result, weak.upgrade()) {
-                    t.toast(&format!("Could not change the default app: {e}"));
-                }
-                sw.set_state(on && result.is_ok());
-                glib::Propagation::Stop
-            });
-            row.append(&switch);
-            p.append(&row);
+                row.append(&dropdown);
+                table.append(&row);
+            }
+            let clamp = adw::Clamp::builder().maximum_size(640).child(&table).halign(gtk::Align::Start).build();
+            p.append(&clamp);
         }
     }
 

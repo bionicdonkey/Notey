@@ -2,8 +2,10 @@
 //! own `main` (no libtest harness) and runs named scenarios one after another, each in its own
 //! throwaway profile.
 //!
-//!   xvfb-run -a cargo test --test headless_gtk                 run everything
-//!   xvfb-run -a cargo test --test headless_gtk -- find         only scenarios whose name contains "find"
+//!   NOTEY_ISOLATED_DISPLAY=1 xvfb-run -a cargo test --test headless_gtk            run everything
+//!   NOTEY_ISOLATED_DISPLAY=1 xvfb-run -a cargo test --test headless_gtk -- find    names containing "find"
+//!   Without NOTEY_ISOLATED_DISPLAY (or NOTEY_ALLOW_REAL_DISPLAY) the display is ignored, so a
+//!   plain `cargo test` never opens windows on your own session.
 //!   NOTEY_REQUIRE_DISPLAY=1 ...                                a missing display is a failure, not a skip
 //!   NOTEY_STRICT_WARNINGS=1 ...                                GLib/GTK criticals fail the scenario
 mod editing;
@@ -17,6 +19,12 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use support::{Env, Scenario};
 
 fn main() {
+    // Real windows open on whatever display this finds. Unless the caller says it is a throwaway
+    // one (scripts/ci.sh does), treat the user's own session as no display at all.
+    if std::env::var_os("NOTEY_ISOLATED_DISPLAY").is_none() && std::env::var_os("NOTEY_ALLOW_REAL_DISPLAY").is_none() {
+        std::env::remove_var("DISPLAY");
+        std::env::remove_var("WAYLAND_DISPLAY");
+    }
     let filters: Vec<String> = std::env::args().skip(1).filter(|a| !a.starts_with("--")).collect();
     if adw::init().is_err() {
         if std::env::var_os("NOTEY_REQUIRE_DISPLAY").is_some() {
